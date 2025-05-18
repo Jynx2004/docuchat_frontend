@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { EditorState } from 'prosemirror-state'
 import { schema } from 'prosemirror-schema-basic'
 import { exampleSetup } from 'prosemirror-example-setup'
@@ -25,14 +25,13 @@ export default function Input() {
       const response = await fetch('http://localhost:4000/api/doc/rooms')
       if (!response.ok) throw new Error('Failed to fetch rooms')
       const data = await response.json()
-      return data.rooms || [] // assuming backend sends { rooms: ['room1', 'room2', ...] }
+      return data.rooms || []
     } catch (error) {
       console.error('Error fetching rooms:', error)
       return []
     }
   }
 
-  // Create new document in backend (called on connect)
   const createNewDoc = async (roomName: string, ydoc: Y.Doc) => {
     try {
       const stateAsUint8Array = Y.encodeStateAsUpdate(ydoc)
@@ -56,7 +55,6 @@ export default function Input() {
     }
   }
 
-  // Save/update existing document (called on Save button click)
   const saveDoc = async (roomName: string, ydoc: Y.Doc) => {
     try {
       const stateAsUint8Array = Y.encodeStateAsUpdate(ydoc)
@@ -86,24 +84,63 @@ export default function Input() {
       return
     }
 
-    // Check if room exists before creating new one
     const existingRooms = await getExistingRooms()
     if (existingRooms.includes(inputValue)) {
       alert('Room name already taken, please choose another one.')
       return
     }
 
+    setConnected(true) // Set connected first to ensure the editorRef div renders
+  }
+
+  // useEffect(() => {
+  //   if (!connected || !editorRef.current) return
+
+  //   const ydoc = new Y.Doc()
+  //   const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
+  //   const yXmlFragment = ydoc.getXmlFragment('prosemirror')
+
+  //   const state = EditorState.create({
+  //     schema,
+  //     plugins: [
+  //       ySyncPlugin(yXmlFragment),
+  //       yCursorPlugin(provider.awareness),
+  //       yUndoPlugin(),
+  //       keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Mod-Shift-z': redo }),
+  //       keymap(baseKeymap),
+  //       ...exampleSetup({ schema })
+  //     ]
+  //   })
+
+  //   const view = new EditorView(editorRef.current, { state })
+
+  //   viewRef.current = view
+  //   providerRef.current = provider
+  //   ydocRef.current = ydoc
+
+  //   // Optionally, create the doc in backend only once
+  //   createNewDoc(inputValue, ydoc)
+
+  //   return () => {
+  //     view.destroy()
+  //     provider.destroy()
+  //     ydoc.destroy()
+  //   }
+  // }, [connected])
+
+  useEffect(() => {
+    if (!connected || !editorRef.current) return
+
     const ydoc = new Y.Doc()
     const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
     const yXmlFragment = ydoc.getXmlFragment('prosemirror')
 
-    const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
+    let view: EditorView | null = null
 
     const state = EditorState.create({
-      doc,
       schema,
       plugins: [
-        ySyncPlugin(yXmlFragment, { mapping }),
+        ySyncPlugin(yXmlFragment),
         yCursorPlugin(provider.awareness),
         yUndoPlugin(),
         keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Mod-Shift-z': redo }),
@@ -112,17 +149,29 @@ export default function Input() {
       ]
     })
 
-    const view = new EditorView(editorRef.current!, { state })
+    view = new EditorView(editorRef.current, {
+      state,
+      dispatchTransaction(transaction) {
+        if (view) {
+          const newState = view.state.apply(transaction)
+          view.updateState(newState)
+          console.log('Editor updated:', newState.doc.toJSON())
+        }
+      }
+    })
 
     viewRef.current = view
     providerRef.current = provider
     ydocRef.current = ydoc
 
-    // Create new document entry on backend
-    await createNewDoc(inputValue, ydoc)
+    createNewDoc(inputValue, ydoc)
 
-    setConnected(true)
-  }
+    return () => {
+      view.destroy()
+      provider.destroy()
+      ydoc.destroy()
+    }
+  }, [connected])
 
   const disconnectFromRoom = () => {
     viewRef.current?.destroy()
@@ -137,6 +186,15 @@ export default function Input() {
     await saveDoc(inputValue, ydocRef.current)
   }
 
+  console.log('Input value:', inputValue)
+  console.log('editorRef:', editorRef.current)
+  console.log('ydocRef:', ydocRef.current)
+
+  if (ydocRef.current) {
+    console.log('pdf', Buffer.from(Y.encodeStateAsUpdate(ydocRef.current)).toString('base64'))
+  }
+  //console.log('pdf',Buffer.from(Y.encodeStateAsUpdate(ydocRef.current)).toString('base64'))
+
   return (
     <div className='flex flex-col gap-2'>
       <label htmlFor='input' className='text-sm font-medium text-gray-700'>
@@ -145,7 +203,7 @@ export default function Input() {
       <input
         type='text'
         id='input'
-        className='border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
+        className='border border-gray-300 text-black rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
         onChange={e => setInputValue(e.target.value)}
         value={inputValue}
       />
@@ -153,17 +211,19 @@ export default function Input() {
         <button onClick={connectToRoom} className='bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600'>
           Connect
         </button>
-        <button onClick={disconnectFromRoom} className='bg-red-500 text-white rounded-md p-2 hover:bg-red-600'>
-          Disconnect
-        </button>
         {connected && (
-          <button onClick={handleSave} className='bg-green-500 text-white rounded-md p-2 hover:bg-green-600'>
-            Save
-          </button>
+          <>
+            <button onClick={disconnectFromRoom} className='bg-red-500 text-white rounded-md p-2 hover:bg-red-600'>
+              Disconnect
+            </button>
+            <button onClick={handleSave} className='bg-green-500 text-white rounded-md p-2 hover:bg-green-600'>
+              Save
+            </button>
+          </>
         )}
       </div>
 
-      {connected && <div ref={editorRef} className='border mt-4 p-4 rounded-md' />}
+      {connected && <div ref={editorRef} className='border mt-4 p-4 rounded-md min-h-[300px]' />}
     </div>
   )
 }
