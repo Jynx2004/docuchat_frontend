@@ -23,7 +23,7 @@ export default function Join() {
   // Fetch all existing room names from backend
   const getExistingRooms = async (): Promise<string[]> => {
     try {
-      const response = await fetch('http://localhost:4000/api/doc/rooms')
+      const response = await fetch('https://docuchat-backend-eqtx.onrender.com/api/doc/rooms')
       if (!response.ok) throw new Error('Failed to fetch rooms')
       const data = await response.json()
       return data.rooms || [] // assuming backend sends { rooms: ['room1', 'room2', ...] }
@@ -45,7 +45,7 @@ export default function Join() {
       //const base64State = Buffer.from(stateAsUint8Array).toString('base64')
       const base64State = btoa(String.fromCharCode(...stateAsUint8Array))
 
-      const response = await fetch(`http://localhost:4000/api/doc/save/${roomName}`, {
+      const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/save/${roomName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ydocState: base64State })
@@ -123,7 +123,7 @@ export default function Join() {
 
     async function joinroomfunction() {
       try {
-        const response = await fetch(`http://localhost:4000/api/doc/${inputValue}`)
+        const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/${inputValue}`)
         if (!response.ok) throw new Error('Failed to fetch document')
         const data = await response.json()
 
@@ -246,6 +246,7 @@ export default function Join() {
           </button>
         )}
       </div>
+
       {connected && <div ref={editorRef} className='border mt-4 p-4 text-black rounded-md min-h-[300px]' />}
     </>
   )

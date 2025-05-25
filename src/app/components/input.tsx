@@ -22,7 +22,7 @@ export default function Input() {
   // Fetch all existing room names from backend
   const getExistingRooms = async (): Promise<string[]> => {
     try {
-      const response = await fetch('http://localhost:4000/api/doc/rooms')
+      const response = await fetch('https://docuchat-backend-eqtx.onrender.com/api/doc/rooms')
       if (!response.ok) throw new Error('Failed to fetch rooms')
       const data = await response.json()
       return data.rooms || []
@@ -37,7 +37,7 @@ export default function Input() {
       const stateAsUint8Array = Y.encodeStateAsUpdate(ydoc)
       const base64State = Buffer.from(stateAsUint8Array).toString('base64')
 
-      const response = await fetch(`http://localhost:4000/api/doc/create/${roomName}`, {
+      const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/create/${roomName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ydocState: base64State })
@@ -60,7 +60,7 @@ export default function Input() {
       const stateAsUint8Array = Y.encodeStateAsUpdate(ydoc)
       const base64State = Buffer.from(stateAsUint8Array).toString('base64')
 
-      const response = await fetch(`http://localhost:4000/api/doc/save/${roomName}`, {
+      const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/save/${roomName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ydocState: base64State })
