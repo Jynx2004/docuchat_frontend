@@ -135,7 +135,7 @@ export default function Join() {
           Y.applyUpdate(ydoc, binaryUpdate)
         }
 
-        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc1)
+        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
         const yXmlFragment = ydoc.getXmlFragment('prosemirror')
         const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
 
