@@ -122,20 +122,91 @@ export default function Join() {
 
     //const ydoc = new Y.Doc()
 
+    // async function joinroomfunction() {
+    //   try {
+    //     const ydoc = new Y.Doc()
+    //     const ydoc1 = new Y.Doc()
+    //     const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/${inputValue}`)
+    //     if (!response.ok) throw new Error('Failed to fetch document')
+    //     const data = await response.json()
+
+    //     if (data.ydocState) {
+    //       const binaryUpdate = Uint8Array.from(atob(data.ydocState), c => c.charCodeAt(0))
+    //       Y.applyUpdate(ydoc, binaryUpdate)
+    //     }
+
+    //     const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
+    //     const yXmlFragment = ydoc.getXmlFragment('prosemirror')
+    //     const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
+
+    //     let view: EditorView | null = null
+
+    //     const state = EditorState.create({
+    //       doc,
+    //       schema,
+    //       plugins: [
+    //         ySyncPlugin(yXmlFragment, { mapping }),
+    //         yCursorPlugin(provider.awareness),
+    //         yUndoPlugin(),
+    //         keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Mod-Shift-z': redo }),
+    //         keymap(baseKeymap),
+    //         ...exampleSetup({ schema })
+    //       ]
+    //     })
+
+    //     //const view = new EditorView(editorRef.current!, { state })
+    //     view = new EditorView(editorRef.current, {
+    //       state,
+    //       dispatchTransaction(transaction) {
+    //         if (view) {
+    //           const newState = view.state.apply(transaction)
+    //           view.updateState(newState)
+    //           console.log('Editor updated:', newState.doc.toJSON())
+    //         }
+    //       }
+    //     })
+
+    //     viewRef.current = view
+    //     providerRef.current = provider
+    //     ydocRef.current = ydoc
+
+    //     return () => {
+    //       viewRef.current?.destroy()
+    //       providerRef.current?.destroy()
+    //       ydocRef.current?.destroy()
+    //       viewRef.current = null
+    //       providerRef.current = null
+    //       ydocRef.current = null
+    //     }
+    //   } catch (error) {
+    //     console.error('Error loading Yjs doc from backend:', error)
+    //     alert('Failed to load initial document content')
+    //   }
+    // }
+
     async function joinroomfunction() {
       try {
         const ydoc = new Y.Doc()
-        const ydoc1 = new Y.Doc()
         const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/${inputValue}`)
         if (!response.ok) throw new Error('Failed to fetch document')
         const data = await response.json()
 
+        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
+        await new Promise(resolve => {
+          provider.once('sync', resolve) // Wait for provider to sync with other peers
+        })
+
         if (data.ydocState) {
           const binaryUpdate = Uint8Array.from(atob(data.ydocState), c => c.charCodeAt(0))
-          Y.applyUpdate(ydoc, binaryUpdate)
+          Y.transact(
+            ydoc,
+            () => {
+              Y.applyUpdate(ydoc, binaryUpdate)
+            },
+            'load-initial-doc'
+          )
         }
 
-        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc1)
         const yXmlFragment = ydoc.getXmlFragment('prosemirror')
         const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
 
@@ -154,7 +225,6 @@ export default function Join() {
           ]
         })
 
-        //const view = new EditorView(editorRef.current!, { state })
         view = new EditorView(editorRef.current, {
           state,
           dispatchTransaction(transaction) {
@@ -183,6 +253,8 @@ export default function Join() {
         alert('Failed to load initial document content')
       }
     }
+
+    joinroomfunction()
 
     joinroomfunction()
   }, [connected])
