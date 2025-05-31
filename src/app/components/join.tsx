@@ -125,6 +125,7 @@ export default function Join() {
     async function joinroomfunction() {
       try {
         const ydoc = new Y.Doc()
+        const ydoc1 = new Y.Doc()
         const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/${inputValue}`)
         if (!response.ok) throw new Error('Failed to fetch document')
         const data = await response.json()
@@ -134,7 +135,7 @@ export default function Join() {
           Y.applyUpdate(ydoc, binaryUpdate)
         }
 
-        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc)
+        const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', inputValue, ydoc1)
         const yXmlFragment = ydoc.getXmlFragment('prosemirror')
         const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
 
