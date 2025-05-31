@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@handlewithcare/react-prosemirror": "^2.4.2",
+    "jspdf": "^3.0.1",
     "next": "15.3.2",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-example-setup": "^1.2.3",

@@ -7,6 +7,7 @@ import { exampleSetup } from 'prosemirror-example-setup'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap } from 'prosemirror-commands'
 import { EditorView } from 'prosemirror-view'
+import jsPDF from 'jspdf'
 
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
@@ -185,6 +186,28 @@ export default function Join() {
     joinroomfunction()
   }, [connected])
 
+  const handleDownload = () => {
+    if (!viewRef.current) return
+    const text = viewRef.current.state.doc.textContent
+    const blob = new Blob([text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${inputValue || 'document'}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadPDF = () => {
+    if (!viewRef.current) return
+    const text = viewRef.current.state.doc.textContent
+    const doc = new jsPDF()
+    doc.text(text, 10, 10)
+    doc.save(`${inputValue || 'document'}.pdf`)
+  }
+
   async function JoinToRoom() {
     if (!inputValue) {
       alert('Please enter a room name')
@@ -332,6 +355,26 @@ export default function Join() {
           </div>
         </>
       )}
+
+      {/* <div>
+        {connected && (
+          <button onClick={handleDownload} className='bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600'>
+            Download
+          </button>
+        )}
+      </div> */}
+      <div>
+        {connected && (
+          <>
+            <button onClick={handleDownload} className='bg-yellow-500 text-white rounded-md p-2 hover:bg-yellow-600'>
+              Download
+            </button>
+            <button onClick={handleDownloadPDF} className='bg-purple-500 text-white rounded-md p-2 hover:bg-purple-600'>
+              Download PDF
+            </button>
+          </>
+        )}
+      </div>
     </>
   )
 }
