@@ -159,11 +159,12 @@ export default function Join() {
           state,
           dispatchTransaction(transaction) {
             if (view) {
-              if (!hasInitialized) {
-                hasInitialized = true
+              if (hasInitialized) {
+                //hasInitialized = true
                 console.log('Skipping first dispatchTransaction (init)')
                 return
               }
+              hasInitialized = true
               const newState = view.state.apply(transaction)
               view.updateState(newState)
               console.log('Editor updated:', newState.doc.toJSON())
