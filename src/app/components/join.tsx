@@ -119,10 +119,11 @@ export default function Join() {
   useEffect(() => {
     if (!connected || !editorRef.current) return
 
-    const ydoc = new Y.Doc()
+    //const ydoc = new Y.Doc()
 
     async function joinroomfunction() {
       try {
+        const ydoc = new Y.Doc()
         const response = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/${inputValue}`)
         if (!response.ok) throw new Error('Failed to fetch document')
         const data = await response.json()
@@ -151,11 +152,18 @@ export default function Join() {
           ]
         })
 
+        let hasInitialized = false
+
         //const view = new EditorView(editorRef.current!, { state })
         view = new EditorView(editorRef.current, {
           state,
           dispatchTransaction(transaction) {
             if (view) {
+              if (!hasInitialized) {
+                hasInitialized = true
+                console.log('Skipping first dispatchTransaction (init)')
+                return
+              }
               const newState = view.state.apply(transaction)
               view.updateState(newState)
               console.log('Editor updated:', newState.doc.toJSON())
@@ -247,7 +255,90 @@ export default function Join() {
         )}
       </div>
 
-      {connected && <div ref={editorRef} className='border mt-4 p-4 text-black rounded-md min-h-[300px]' />}
+      {/* {connected && <div ref={editorRef} className='border mt-4 p-4 text-black rounded-md min-h-[300px]' />} */}
+
+      {connected && (
+        <>
+          <style>
+            {`
+              .pm-editor-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: #f3f4f6;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px 8px 0 0;
+                padding: 6px 12px;
+                margin-bottom: 0;
+                min-height: 40px;
+                flex-wrap: wrap;
+              }
+              .pm-editor .ProseMirror-menubar,
+              .pm-editor .ProseMirror-menubar-wrapper {
+                all: unset;
+                display: flex;
+              }
+              .pm-editor .ProseMirror {
+                width: 300px;
+                min-height: 300px;
+                outline: none;
+                background: #f9fafb;
+                border-radius: 0 0 8px 8px;
+                padding: 16px;
+                font-size: 1rem;
+                color: #222;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+                border: 1px solid #e5e7eb;
+                border-top: none;
+                font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+                line-height: 1.7;
+                word-break: break-word;
+              }
+              .pm-editor .ProseMirror-selectednode {
+                outline: 2px solid #2563eb;
+              }
+              .pm-editor .ProseMirror-menuitem {
+                margin: 0 2px;
+                border-radius: 4px;
+                transition: background 0.15s;
+                padding: 4px 8px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-size: 1rem;
+              }
+              .pm-editor .ProseMirror-menuitem:hover {
+                background: #e0e7ef;
+              }
+              .pm-editor .ProseMirror-menu-active {
+                background: #2563eb;
+                color: #fff;
+              }
+              .pm-editor .ProseMirror {
+                scrollbar-width: thin;
+                scrollbar-color: #a0aec0 #f9fafb;
+              }
+              .pm-editor .ProseMirror::-webkit-scrollbar {
+                height: 8px;
+                width: 8px;
+                background: #f9fafb;
+              }
+              .pm-editor .ProseMirror::-webkit-scrollbar-thumb {
+                background: #a0aec0;
+                border-radius: 4px;
+              }
+            `}
+          </style>
+          <div className='pm-editor mt-4 rounded-md shadow'>
+            {/* Move toolbar controls to a single line above the editor */}
+            <div className='pm-editor-toolbar'>
+              {/* ProseMirror's menu bar will be rendered here by plugins */}
+              {/* You can add your own controls here if needed */}
+            </div>
+            <div ref={editorRef} />
+          </div>
+        </>
+      )}
     </>
   )
 }
