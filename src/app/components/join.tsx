@@ -20,6 +20,87 @@ export default function Join() {
   const viewRef = useRef<EditorView | null>(null)
   const providerRef = useRef<WebsocketProvider | null>(null)
   const ydocRef = useRef<Y.Doc | null>(null)
+  const [fetchversion, setFetchVersion] = useState(false)
+
+  const [versionTexts, setVersionTexts] = useState([])
+
+  // Helper: Decode base64 Y.Doc state to readable text
+  // const decodeYDocState = (base64State: string) => {
+  //   try {
+  //     const update = Uint8Array.from(atob(base64State), c => c.charCodeAt(0))
+  //     const ydoc = new Y.Doc()
+  //     Y.applyUpdate(ydoc, update)
+  //     const ytext = ydoc.getText('content') // adjust key as needed
+  //     return ytext.toString()
+  //   } catch (err) {
+  //     console.error('Error decoding ydocState:', err)
+  //     return '[Error decoding]'
+  //   }
+  // }
+
+  const decodeYDocState = (base64State: string) => {
+    try {
+      if (!base64State) {
+        console.warn('Empty base64State!')
+        return '[Empty document]'
+      }
+
+      const update = Uint8Array.from(atob(base64State), c => c.charCodeAt(0))
+      const ydoc = new Y.Doc()
+      Y.applyUpdate(ydoc, update)
+
+      const keys = Array.from(ydoc.share.keys())
+      console.log('Keys in Y.Doc:', keys)
+
+      // Since key is 'prosemirror' and likely XmlFragment
+      const xmlFragment = ydoc.get('prosemirror', Y.XmlFragment)
+
+      if (!xmlFragment) {
+        console.warn('No prosemirror fragment found')
+        return '[No content]'
+      }
+
+      const textContent = xmlFragment.toString()
+      console.log('Extracted text:', textContent)
+
+      return (
+        textContent
+          .replace(/<paragraph>/g, '<p>')
+          .replace(/<\/paragraph>/g, '</p>')
+          .replace(/<hard_break><\/hard_break>/g, '<br>') || '[Empty content]'
+      )
+    } catch (err) {
+      console.error('Error decoding ydocState:', err)
+      return '[Error decoding]'
+    }
+  }
+
+  useEffect(() => {
+    if (fetchversion) {
+      const fetchVersions = async () => {
+        try {
+          const res = await fetch(`https://docuchat-backend-eqtx.onrender.com/api/doc/versions/${inputValue}`)
+          const data = await res.json()
+          if (data.versions) {
+            const texts = data.versions.map((version: { timestamp: any; ydocState: any }) => ({
+              timestamp: version.timestamp,
+              text: decodeYDocState(version.ydocState)
+            }))
+            setVersionTexts(texts)
+            setFetchVersion(false)
+          }
+        } catch (err) {
+          setFetchVersion(false)
+          console.error('Error fetching versions:', err)
+        }
+      }
+
+      fetchVersions()
+    }
+  }, [fetchversion])
+
+  console.log('logging the version', versionTexts)
+  console.log('fetch version', fetchversion)
 
   // Fetch all existing room names from backend
   const getExistingRooms = async (): Promise<string[]> => {
@@ -236,6 +317,8 @@ export default function Join() {
           }
         })
 
+        setFetchVersion(true)
+
         viewRef.current = view
         providerRef.current = provider
         ydocRef.current = ydoc
@@ -327,9 +410,11 @@ export default function Join() {
         value={inputValue}
       />
       <div className='flex gap-2'>
-        <button onClick={JoinToRoom} className='bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600'>
-          Join
-        </button>
+        {!connected && (
+          <button onClick={JoinToRoom} className='bg-blue-500 text-white rounded-md p-2 hover:bg-blue-600'>
+            Join
+          </button>
+        )}
         {connected && (
           <button onClick={disconnectFromRoom} className='bg-red-500 text-white rounded-md p-2 hover:bg-red-600'>
             Disconnect
@@ -446,6 +531,25 @@ export default function Join() {
           </>
         )}
       </div>
+      {connected && (
+        <div>
+          {versionTexts.length > 0 ? (
+            <div>
+              {versionTexts.map(({ text, timestamp }, index) => (
+                <div key={index} style={{ marginBottom: '1.5rem' }}>
+                  <div
+                    dangerouslySetInnerHTML={{ __html: text }}
+                    style={{ border: '1px solid #ccc', padding: '0.5rem', color: 'black' }}
+                  />
+                  <small style={{ color: '#666' }}>{new Date(timestamp).toLocaleString()}</small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: 'black' }}>NO VERSIONS FOUND !!</div>
+          )}
+        </div>
+      )}
     </>
   )
 }
